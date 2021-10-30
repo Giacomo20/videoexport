@@ -4,14 +4,19 @@ import shutil
 import cv2
 import numpy as np
 
+# ----------------------------------------------------------------------------------------------
+# config
+
 output_directory = "./output"
 threshold = 5
 margin_size = 20
+glob_perc = 0.05
 
+# ----------------------------------------------------------------------------------------------
+# functions
 
 def get_small_frame(frame):
     return frame[margin_size*2:-margin_size*2,margin_size*2:-margin_size*2]
-
 
 def save_frame(frame, small_frame_old):
     if (np.sum(frame[0:margin_size, :, 0] != 255) > 0.1 * margin_size * frame.shape[1]):
@@ -20,42 +25,43 @@ def save_frame(frame, small_frame_old):
     diff = cv2.absdiff(small_frame, small_frame_old)
     difft = diff > threshold
     perc = np.sum(np.any(difft, 2)) / (difft.shape[0] * difft.shape[1])
-    if (perc < 0.05):
+    if (perc > glob_perc):
         return False
-    
-    small_frame_conv = (small_frame[:-1,:-1] + small_frame[1:,:-1] + \
-                        small_frame[:-1,1:] + small_frame[1:,1:]) / 4
-    norm = (np.sum((small_frame_conv - small_frame_old[:-1,:-1])**2) \
-            /small_frame_conv.shape[0]/small_frame_conv.shape[1]/small_frame_conv.shape[2])**0.5
-    print(norm)
-    return norm > 180
+    return True
 
-if len(sys.argv) < 2:
-    print("ERROR: no input file")
-    sys.exit()
-
+# ----------------------------------------------------------------------------------------------
+# environment
 shutil.rmtree(output_directory)
 os.mkdir(output_directory)
 
+# parsing command arguments
+if len(sys.argv) < 2:
+    print("ERROR: no input file")
+    sys.exit()
 capture = cv2.VideoCapture(sys.argv[1])
-count = 0
+
+# init loop
+index = 0
 small_frame_old = ''
-perc = 0
+saved_old = False
 while (capture.isOpened()):
+    index += 1
     result, frame = capture.read()
     if result == False:
         break
 
+    if ((index % 2) == 0):
+        pass
+
     # algorithm
     save = False
-    if (count != 0):
+    if (index != 1):
         save = save_frame(frame, small_frame_old)
 
-    if ((count == 0) or save):
-        print("save")
-        cv2.imwrite(output_directory + '/' + str(count) + '.jpg', frame)
-    count += 1
-    print("img ", count)
+    if (save and (not save_old)):
+        cv2.imwrite(output_directory + '/' + str(index) + '.jpg', frame)
+
+    save_old = save
     small_frame_old = get_small_frame(frame)
 
 capture.release()
