@@ -18,9 +18,12 @@ glob_perc = 0.05
 def get_small_frame(frame):
     return frame[margin_size*2:-margin_size*2,margin_size*2:-margin_size*2]
 
-def save_frame(frame, small_frame_old):
+def check_is_slide(frame):
     if (np.sum(frame[0:margin_size, :, 0] != 255) > 0.1 * margin_size * frame.shape[1]):
         return False
+    return True
+
+def save_frame(frame, small_frame_old):
     small_frame = get_small_frame(frame)
     diff = cv2.absdiff(small_frame, small_frame_old)
     difft = diff > threshold
@@ -50,8 +53,11 @@ while (capture.isOpened()):
     if result == False:
         break
 
-    if ((index % 2) == 0):
-        pass
+    if (index % 2) == 0:
+        continue
+
+    if (index != 1) and (not check_is_slide(frame)):
+        continue
 
     # algorithm
     save = False
